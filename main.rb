@@ -1,6 +1,6 @@
 #encoding: utf-8
 require 'csv'
-require 'pp'
+require 'optparse'
 require 'mechanize'
 
 class StationNotFoundError < StandardError
@@ -9,12 +9,15 @@ end
 class Request
 	attr_reader :from, :to, :month, :day, :hour, :min
 
-	def initialize from, to
+	def initialize from, to, date=nil
 		@from = from
 		@to = to
 		
-		#FIXME: パラメータで指定できる感じにしたい
-		now = Time.now
+		if date
+			now = Time.at(date)
+		else
+			now = Time.now
+		end
 		@month = now.month
 		@day = now.day
 		@hour = now.hour
@@ -37,7 +40,7 @@ class AddfareRequestService
 	SORT_VALUES = { :time => 0, :cost => 1, :count =>2 }
 	BASIS_VALUES = { :go => 0, :arrival => 0, :first =>4 , :last => 3}
 
-	DEFAULT_SORT_VALUE = SORT_VALUES[:time]
+	DEFAULT_SORT_VALUE = SORT_VALUES[:cost]
 	DEFAULT_BASIS_VALUE = SORT_VALUES[:go]
 
 	def initialize 
@@ -68,25 +71,36 @@ class AddfareRequestService
 end
 
 class AddfareOnTheTrainApplication
-		SLEEP_INTERVAL = 2 # [sec]
+		SLEEP_INTERVAL = 1 # [sec]
 
 	def initialize args
 		raise RuntimeError.new unless args[0]
 
-		#TODO:引数ちゃんとハンドリングする
-		#TODO:csv以外にも対応する
-		@csv_file_name = args[0]
+		@date = Time.now
 		@sleep_interval = SLEEP_INTERVAL
+
+		parser = OptionParser.new do |parser|
+			parser.accept(Time) do |s, |
+				begin
+					Time.parse(s) if s
+				rescue
+					raise OptionParser::InvalidArgument, s
+				end
+			end
+		end
+
+		parser.on('-f', '--file CSV_FILE', '精算する駅を列挙したCSVファイルのパス') {|v| @csv_file_name = v }
+		parser.on('-d', '--date DATE', Time, '乗車日時(YYYY-mm-dd HH:MM形式)') {|v| @date = v }
+		parser.parse!(args)
 	end
 
 	def execute
 		service = AddfareRequestService.new
-		total = 0
 		csv = CSV.open(@csv_file_name)
 
 		begin
 			addfares = csv.map do |route|
-				request = Request.new(route[0], route[1])
+				request = Request.new(route[0], route[1], @date)
 				addfare = service.get request
 
 				p "#{request.from} - #{request.to}間: #{addfare}円"
