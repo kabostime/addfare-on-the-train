@@ -25,7 +25,7 @@ class Request
 	end
 end
 
-class AddfareRequestService
+class FareRequestService
 	BASE_URL = 'http://www.navitime.co.jp/transfer/search'
 
 	FROM_PARAM = 'orvStationName'
@@ -60,13 +60,13 @@ class AddfareRequestService
 			SORT_PARAM => DEFAULT_SORT_VALUE,
 			BASIS_PARAM => DEFAULT_BASIS_VALUE,
 		}
-		addfare = 0
+		fare = 0
 		@agent.get(BASE_URL, params) do |page|
 			raise StationNotFoundError if page.body.force_encoding('UTF-8')['お探しの駅が見つかりませんでした']
 
-			addfare = page.search('//*[@id="routesum_frame"]/div/div[1]/div[3]/div[2]/span').text[0..-2].to_i
+			fare = page.search('//*[@id="routesum_frame"]/div/div[1]/div[3]/div[2]/span').text[0..-2].to_i
 		end
-		addfare
+		fare
 	end
 end
 
@@ -95,21 +95,21 @@ class AddfareOnTheTrainApplication
 	end
 
 	def execute
-		service = AddfareRequestService.new
+		service = FareRequestService.new
 		csv = CSV.open(@csv_file_name)
 
 		begin
-			addfares = csv.map do |route|
+			fares = csv.map do |route|
 				request = Request.new(route[0], route[1], @date)
-				addfare = service.get request
+				fare = service.get request
 
-				p "#{request.from} - #{request.to}間: #{addfare}円"
+				p "#{request.from} - #{request.to}間: #{fare}円"
 
 				sleep @sleep_interval
-				addfare
+				fare
 			end
 
-			p "トータル: #{addfares.inject(:+)}円"
+			p "トータル: #{fares.inject(:+)}円"
 		ensure
 			csv.close
 		end
