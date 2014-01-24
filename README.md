@@ -15,4 +15,13 @@ Usage
 出発駅2,到着駅2
 ```
 
-`ruby main.rb routes.csv`
+`ruby main.rb -f routes.csv -d '2013-01-01 12:00:00'`
+
+
+実行時のオプションは`ruby main.rb --help`を適宜ご参照下さい。一応貼っとくけど。
+
+```
+Usage: main [options]
+    -f, --file CSV_FILE              精算する駅を列挙したCSVファイルのパス
+    -d, --date DATE                  乗車日時(YYYY-MM-DD HH:mm形式)
+```
